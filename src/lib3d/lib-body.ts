@@ -4,14 +4,13 @@
  * Kapselt ein Solid mit Position, Rotation, Geschwindigkeit und Farbe.
  *
  * GPU-Modell (identisch zu Go lib3d_gl_go): Das Solid hält nur CPU-Geometrie
- * (Vertices/Kanten/Faces in flachen Float-Arrays). Der Upload in den
- * GPU-Batch passiert pro Frame in draw(). Es gibt keinen persistenten
+ * (Vertices/Kanten/Faces in flachen Float-Arrays). Der Upload in den GPU-Batch
+ * passiert pro Frame in lib-render.ts drawBody(). Es gibt keinen persistenten
  * GPU-Buffer pro Solid und kein Retain/Release/Dispose – ein Body kann
  * einfach aus einer Liste entfernt werden.
  */
 
 import * as l3d from "./lib-3d.ts";
-import * as wgl from "./lib-wgl.ts";
 import { createBoxSolid, createGridSolid, createPyramidSolid, createSphereSolid } from "./lib-solids.ts";
 import type { Solid } from "./lib-solids.ts";
 
@@ -90,35 +89,24 @@ export class Body {
   getFacePlanes(): l3d.Plane[] {
     if (!this.faces || this.faces.length === 0) return [];
 
-    // Rotation + Translation auf alle Vertices anwenden (wie in C)
-    const rot = l3d.rotateMatrix(this.rotX, this.rotY, this.rotZ);
-    const worldVerts = this.solid.vertices.map(v =>
-      v.transform(rot).add(this.pos),
-    );
+    // Rotation + Translation über die Modellmatrix (Single Source of Truth,
+    // dieselbe Matrix wie beim Rendering in lib-render.ts).
+    const m = this.modelMatrix();
+    const worldVerts = this.solid.vertices.map(v => v.transform(m));
     return this.faces.map(faceIdx =>
       l3d.createPlaneFromFace(faceIdx.map(i => worldVerts[i])),
     );
   }
 
-  /** Zeichnet den Body. Farbe und ModelView werden pro Body gesetzt und
-   *  in den GPU-Batch gesammelt (flushBatch am Frame-Ende).
-   *  Flächen werden gefüllt und beleuchtet (Flat Shading), Kanten als
-   *  Drahtgitter darüber gezeichnet – analog Go Body.Draw(). */
-  draw(view: l3d.Matrix4x4) {
+  /** Modellmatrix (Translation × Rotation) – dieselbe Matrix, die das
+   *  Rendering (lib-render.ts drawBody) und die Kollision (getFacePlanes)
+   *  verwenden. Single Source of Truth, damit beide nicht divergieren. */
+  modelMatrix(): l3d.Matrix4x4 {
     const t = l3d.translateMatrix(this.pos.x, this.pos.y, this.pos.z);
-    let world: l3d.Matrix4x4;
     if (this.rotX === 0 && this.rotY === 0 && this.rotZ === 0) {
-      world = t;
-    } else {
-      world = l3d.multMatrix(t, l3d.rotateMatrix(this.rotX, this.rotY, this.rotZ));
+      return t;
     }
-
-    wgl.strokeWidth(this.lineWidth);
-    wgl.strokeColor(this.color);
-    wgl.fillColor(this.color); // Füllfarbe für die (beleuchteten) Flächen
-
-    // ── Solid sammelt Faces + Kanten in den Batch (eigene ModelView) ──
-    this.solid.draw(view, world);
+    return l3d.multMatrix(t, l3d.rotateMatrix(this.rotX, this.rotY, this.rotZ));
   }
 
   /** Distanz zu einem anderen Body (Mittelpunkt zu Mittelpunkt). */

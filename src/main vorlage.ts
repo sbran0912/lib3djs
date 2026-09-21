@@ -4,9 +4,10 @@
 // Anzeige: Bodengitter + eine Kugel
 // Bausteine: wgl (Renderer) · l3d (Mathe) · Body/Solid (Objekte)
 // ====================================================================
-import * as wgl from "./lib-wgl.ts";
-import * as l3d from "./lib-3d.ts";
-import { createGrid, createSphere } from "./lib-body.ts";
+import * as wgl from "./lib3d/lib-wgl.ts";
+import * as l3d from "./lib3d/lib-3d.ts";
+import * as render from "./lib3d/lib-render.ts";
+import { createGrid, createSphere } from "./lib3d/lib-body.ts";
 
 // ====================================================================
 // KONFIGURATION (anpassen)
@@ -84,8 +85,8 @@ function draw() {
   ball.rotY += 0.01;
 
   // Objekte zeichnen (Bodengitter zuerst für korrekte Tiefe)
-  grid.draw(view);
-  ball.draw(view);
+  render.drawBody(grid, view);
+  render.drawBody(ball, view);
 }
 
 // ====================================================================

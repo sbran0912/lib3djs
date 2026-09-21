@@ -6,11 +6,12 @@
 // Zusätzlich werden pro Fahrzeug Debug-Overlays gezeichnet:
 // Heading-Pfeil (Fahrtrichtung) + DNA-Suchradien als Kreise.
 // ====================================================================
-import * as wgl from "./lib-wgl.ts";
-import * as l3d from "./lib-3d.ts";
-import { Body, createGrid } from "./lib-body.ts";
-import { createPyramidSolid, createSphereSolid } from "./lib-solids.ts";
-import type { Solid } from "./lib-solids.ts";
+import * as wgl from "./lib3d/lib-wgl.ts";
+import * as l3d from "./lib3d/lib-3d.ts";
+import * as render from "./lib3d/lib-render.ts";
+import { Body, createGrid } from "./lib3d/lib-body.ts";
+import { createPyramidSolid, createSphereSolid } from "./lib3d/lib-solids.ts";
+import type { Solid } from "./lib3d/lib-solids.ts";
 
 // ====================================================================
 // VEHICLE – Physik-fähiges Fahrzeug mit Steering Behaviors
@@ -211,7 +212,7 @@ function draw() {
   wgl.setLightDirection(camLight.x, camLight.y, camLight.z);
 
   // Bodengitter
-  grid.draw(view);
+  render.drawBody(grid, view);
 
   // Futter nachwachsen lassen (min 20, +30 pro Respawn)
   food = respawnFood(food, foodMesh, 20, 30, "#44ff44");
@@ -233,7 +234,7 @@ function draw() {
     // Farbe nach Gesundheit: rot wenn schwach, sonst weiß
     v.body.color = v.health < 0.5 ? "#FF0000" : "#ffffff";
 
-    v.body.draw(view);
+    render.drawBody(v.body, view);
 
     if (getOlder) v.health -= 0.05;
 
@@ -245,8 +246,8 @@ function draw() {
   }
 
   // Futter zeichnen
-  for (const p of poison) p.draw(view);
-  for (const f of food) f.draw(view);
+  for (const p of poison) render.drawBody(p, view);
+  for (const f of food) render.drawBody(f, view);
 
   // Debug-Overlays (Batched Drawing): Heading-Pfeile + DNA-Radien.
   // Die Primitives werden nur gesammelt und am Frame-Ende in einem

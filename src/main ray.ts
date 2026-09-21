@@ -5,10 +5,11 @@
 // die Y-Achse und wird an den Boxen/Pyramide „abgeschnitten“ (Clipping).
 // Kamera kreist um die Szene.
 // ====================================================================
-import * as wgl from "./lib-wgl.ts";
-import * as l3d from "./lib-3d.ts";
-import { Body } from "./lib-body.ts";
-import { createBoxSolid, createGridSolid, createPyramidSolid } from "./lib-solids.ts";
+import * as wgl from "./lib3d/lib-wgl.ts";
+import * as l3d from "./lib3d/lib-3d.ts";
+import * as render from "./lib3d/lib-render.ts";
+import { Body } from "./lib3d/lib-body.ts";
+import { createBoxSolid, createGridSolid, createPyramidSolid } from "./lib3d/lib-solids.ts";
 
 // ====================================================================
 // KONFIGURATION  (wie Go main.go_ray: Init(1600, 1000))
@@ -94,7 +95,7 @@ function draw() {
 
   // Alle Bodies zeichnen (Grid zuerst für korrekte Tiefe)
   for (const b of bodies) {
-    b.draw(view);
+    render.drawBody(b, view);
   }
 
   // Lichtkegel rotieren

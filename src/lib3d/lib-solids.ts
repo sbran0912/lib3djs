@@ -3,8 +3,10 @@
  *
  * Trennung der Zuständigkeiten:
  *   lib-3d.ts      → Mathematik (Vektoren, Matrizen, Projektion)
- *   lib-solids.ts  → 3D-Objekte + Rendering-Logik (Transformation → wgl-Batch)
+ *   lib-solids.ts  → 3D-Objekte (reine CPU-Geometrie)
+ *   lib-body.ts    → Physik-fähige Körper (Position/Rotation/Farbe)
  *   lib-wgl.ts     → Renderer (Batch-Sammlung, Shader, Primitives)
+ *   lib-render.ts  → Zeichnen von Solid/Body (Transformation → wgl-Batch)
  *
  * Geschlossene Körper (Box, Pyramide, Kugel) tragen zusätzlich `faces`
  * (konvexe Polygon-Indizes) und werden dadurch GEFÜLLT und mit Flat Shading
@@ -13,12 +15,11 @@
  * GPU-Modell (identisch zu Go lib3d_gl_go):
  * Ein Solid ist reine CPU-Geometrie. Die Kanten/Flächen werden einmal in
  * flache Float-Arrays expandiert (flatEdges/flatFaces); der Upload in den
- * GPU-Batch passiert dann pro Frame in draw() – es gibt KEINEN persistenten
- * GPU-Buffer pro Solid und kein Retain/Release mehr nötig.
+ * GPU-Batch passiert dann pro Frame in lib-render.ts drawSolid() – es gibt
+ * KEINEN persistenten GPU-Buffer pro Solid und kein Retain/Release nötig.
  */
 
 import * as l3d from "./lib-3d.ts";
-import * as wgl from "./lib-wgl.ts";
 
 // ====================================================================
 // HILFE – Hex-Farbe abdunkeln
@@ -91,23 +92,6 @@ export class Solid {
       }
     }
     this.flatFaces = new Float32Array(faceVerts);
-  }
-
-  /**
-   * Zeichnet das Solid (analog Go Solid.Draw):
-   *   Pipeline: Objekt-Koordinaten
-   *     → wgl.setModelView(view × world)
-   *     → Faces als TRIANGLES in den Batch (Fill-Farbe, beleuchtet)
-   *     → Kanten als LINES in den Batch   (Stroke-Farbe, unbelichtet)
-   * Das eigentliche Zeichnen passiert erst beim Frame-Ende (flushBatch).
-   */
-  draw(view: l3d.Matrix4x4, world: l3d.Matrix4x4): void {
-    const vw = l3d.multMatrix(view, world);
-    wgl.setModelView(vw);
-    if (this.flatFaces.length > 0) {
-      wgl.submitTriangles(this.flatFaces); // Flächen (Fill-Farbe, beleuchtet)
-    }
-    wgl.submitLines(this.flatEdges);       // Kanten (Stroke-Farbe, unbelichtet)
   }
 }
 

@@ -35,9 +35,9 @@ const CAM_HEIGHT = 140;
 
 const boxMesh = createBoxSolid(100, 80, 60); // CPU-Geometrie; Upload in den GPU-Batch pro Frame
 const pyrMesh = createPyramidSolid(90, 120);
-const gridMesh = createGridSolid(600, 24);
+//const gridMesh = createGridSolid(600, 24);
 
-const grid = new Body(gridMesh, 0, 0, 0, { color: "#777774", lineWidth: 1 });
+//const grid = new Body(gridMesh, 0, 0, 0, { color: "#777774", lineWidth: 1 });
 
 const box1 = new Body(boxMesh, 150, 0, 50,   { color: "#ff0000", lineWidth: 2 });
 const box2 = new Body(boxMesh, 0, 0, 100,    { color: "#00ffff", lineWidth: 2 });
@@ -45,15 +45,7 @@ const box3 = new Body(boxMesh, -150, 0, -100,{ color: "#ff0000", lineWidth: 2 })
 const box4 = new Body(boxMesh, -200, 0, 30,  { color: "#00ffff", lineWidth: 2, rotY: Math.PI / 2 });
 const pyr1 = new Body(pyrMesh, 100, 0, -100); // Default: weiß, lineWidth 1
 
-// Face-Topologie für die Intersection (wie createBox/createPyramid in lib-body)
-grid.faces = gridMesh.faces;
-box1.faces = boxMesh.faces;
-box2.faces = boxMesh.faces;
-box3.faces = boxMesh.faces;
-box4.faces = boxMesh.faces;
-pyr1.faces = pyrMesh.faces;
-
-const bodies = [grid, box1, box2, box3, box4, pyr1];
+const bodies = [/*grid,*/ box1, box2, box3, box4, pyr1];
 
 // ====================================================================
 // DRAW-SCHLEIFE (1:1-Port der Go Render-Schleife in main.go_ray)
@@ -74,25 +66,17 @@ function draw() {
     fpsLast = now;
   }
 
-  wgl.background(40, 40, 40);
-
   const camAngle = timeAccum * 0.15;
-  const camPos = new l3d.Vec3(
-    Math.sin(camAngle) * CAM_RADIUS,
-    CAM_HEIGHT,
-    Math.cos(camAngle) * CAM_RADIUS,
-  );
+  const camPos = new l3d.Vec3(Math.sin(camAngle) * CAM_RADIUS, CAM_HEIGHT, Math.cos(camAngle) * CAM_RADIUS);
   const view = l3d.lookAtMatrix(camPos, CAM_TARGET, CAM_UP);
   const proj = l3d.perspectiveMatrix(FOV_Y, wgl.getWidth() / wgl.getHeight(), Z_NEAR, Z_FAR);
-  wgl.setProjection(proj);
-  wgl.setView(view);
-
-  // Weltfeste „Sonne“: Richtung ist im Weltraum fix und wird pro Frame in den
-  // Kameraraum gedreht – so bleibt die Beleuchtung konsistent, obwohl die
-  // Kamera um die Szene kreist.
   const sunDir = new l3d.Vec3(1, 0, 0);
   const camLight = sunDir.transformDir(view);
   wgl.setLightDirection(camLight.x, camLight.y, camLight.z);
+
+  wgl.setProjection(proj);
+  wgl.setView(view);
+  wgl.background(40, 40, 40);
 
   // Alle Bodies zeichnen (Grid zuerst für korrekte Tiefe)
   for (const b of bodies) {

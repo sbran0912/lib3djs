@@ -76,6 +76,7 @@ function draw() {
   const view = l3d.lookAtMatrix(CAM_POS, CAM_TARGET, CAM_UP);
   const proj = l3d.perspectiveMatrix(FOV_Y, wgl.getWidth() / wgl.getHeight(), Z_NEAR, Z_FAR);
   wgl.setProjection(proj);
+  wgl.setView(view);
 
   // Lichtrichtung der „Sonne“ in den Kameraraum drehen
   const camLight = SUN_DIR.transformDir(view);
@@ -85,8 +86,8 @@ function draw() {
   ball.rotY += 0.01;
 
   // Objekte zeichnen (Bodengitter zuerst für korrekte Tiefe)
-  render.drawBody(grid, view);
-  render.drawBody(ball, view);
+  render.drawBody(grid);
+  render.drawBody(ball);
 }
 
 // ====================================================================

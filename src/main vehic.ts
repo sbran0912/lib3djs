@@ -204,6 +204,7 @@ function draw() {
   const view = l3d.lookAtMatrix(CAM_POS, CAM_TARGET, CAM_UP);
   const proj = l3d.perspectiveMatrix(FOV_Y, wgl.getWidth() / wgl.getHeight(), Z_NEAR, Z_FAR);
   wgl.setProjection(proj);
+  wgl.setView(view);
 
   // Weltfeste „Sonne“: Die Richtung ist im Weltraum fix und wird pro Frame in
   // den Kameraraum gedreht – so bleibt die Beleuchtung über die ganze Szene
@@ -212,7 +213,7 @@ function draw() {
   wgl.setLightDirection(camLight.x, camLight.y, camLight.z);
 
   // Bodengitter
-  render.drawBody(grid, view);
+  render.drawBody(grid);
 
   // Futter nachwachsen lassen (min 20, +30 pro Respawn)
   food = respawnFood(food, foodMesh, 20, 30, "#44ff44");
@@ -234,7 +235,7 @@ function draw() {
     // Farbe nach Gesundheit: rot wenn schwach, sonst weiß
     v.body.color = v.health < 0.5 ? "#FF0000" : "#ffffff";
 
-    render.drawBody(v.body, view);
+    render.drawBody(v.body);
 
     if (getOlder) v.health -= 0.05;
 
@@ -246,31 +247,27 @@ function draw() {
   }
 
   // Futter zeichnen
-  for (const p of poison) render.drawBody(p, view);
-  for (const f of food) render.drawBody(f, view);
+  for (const p of poison) render.drawBody(p);
+  for (const f of food) render.drawBody(f);
 
   // Debug-Overlays (Batched Drawing): Heading-Pfeile + DNA-Radien.
   // Die Primitives werden nur gesammelt und am Frame-Ende in einem
   // einzigen VBO gezeichnet (kein GenBuffers/DeleteBuffers pro Call).
-  wgl.setModelView(view);
+  // Primitives liegen automatisch im Weltraum (Model = Identität).
   for (const v of vehicles) {
     const hp = v.body.pos;
 
     // Heading-Pfeil: Linie vom Fahrzeug in Fahrtrichtung.
-    if (v.health < 0.5) {
-      wgl.strokeColor("#ff4444");
-    } else {
-      wgl.strokeColor("#ffffff");
-    }
     const end = hp.add(v.heading.scale(8));
-    wgl.line(hp.x, hp.y, hp.z, end.x, end.y, end.z);
+    render.drawLine(
+      hp.x, hp.y, hp.z, end.x, end.y, end.z,
+      { stroke: v.health < 0.5 ? "#ff4444" : "#ffffff" },
+    );
 
-    // DNA-Radien als Kreise in der XZ-Ebene. circle(x,y,z) zeichnet in der
-    // XY-Ebene – durch den Tausch (x, z, y) liegt der Kreis flach.
-    wgl.strokeColor(51, 255, 51, 64); // guter Food-Radius (dna[3])
-    wgl.circle(hp.x, hp.z, hp.y, v.dna[3], 0, 48);
-    wgl.strokeColor(255, 51, 51, 64); // Gift-Radius (dna[2])
-    wgl.circle(hp.x, hp.z, hp.y, v.dna[2], 0, 48);
+    // DNA-Radien als Kreise in der XZ-Ebene. drawCircle(x,y,z) zeichnet in
+    // der XY-Ebene – durch den Tausch (x, z, y) liegt der Kreis flach.
+    render.drawCircle(hp.x, hp.z, hp.y, v.dna[3], { stroke: [51, 255, 51, 64], segments: 48 });  // guter Food-Radius
+    render.drawCircle(hp.x, hp.z, hp.y, v.dna[2], { stroke: [255, 51, 51, 64], segments: 48 });  // Gift-Radius
   }
 }
 

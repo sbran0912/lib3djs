@@ -43,14 +43,16 @@ BATCHED DRAWING (identisch zu Go lib3d_gl_go / lib3d.go):
 // aPos = 3D-Punkt in Objektkoordinaten.
 const VERT_SRC = `
   attribute vec3 aPos;
-  uniform mat4 uModelView;
+  uniform mat4 uView;
+  uniform mat4 uModel;
   uniform mat4 uProjection;
   uniform float uPointSize;
 
   varying vec3 vCamPos;
 
   void main() {
-    vec4 camPos = uModelView * vec4(aPos, 1.0);
+    vec4 worldPos = uModel * vec4(aPos, 1.0);
+    vec4 camPos = uView * worldPos;
     vCamPos = camPos.xyz;
     gl_Position = uProjection * camPos;
     gl_PointSize = uPointSize;
@@ -138,7 +140,8 @@ interface DrawCmd {
   lineW:     number;
   center:    [number, number, number];
   radius:    number;
-  mv:        Float32Array;  // ModelView-Snapshot (16, column-major)
+  view:      Float32Array;  // View-Snapshot (16, column-major)
+  model:     Float32Array;  // Model-Snapshot (16, column-major)
   proj:      Float32Array;  // Projection-Snapshot
   lit:       number;        // 1 = gefüllte Fläche → beleuchten
 }
@@ -150,7 +153,8 @@ let prog: WebGLProgram;
 
 // Shader-Locations
 let locPos:         number;
-let locModelView:   WebGLUniformLocation;
+let locView:        WebGLUniformLocation;
+let locModel:       WebGLUniformLocation;
 let locProjection:  WebGLUniformLocation;
 let locPointSize:   WebGLUniformLocation;
 let locMode:        WebGLUniformLocation;
@@ -178,9 +182,7 @@ export let mouseX = 0;
 export let mouseY = 0;
 let mouseStatus = 0;
 
-// Zeichenzustand-Stack (begrenzt wie Go: maxStack 64, Überlauf wird ignoriert)
-const maxStack = 64;
-const stateStack: DrawState[] = [];
+// Aktueller Zeichenzustand (wird pro draw*-Aufruf überschrieben; kein Stack).
 let state: DrawState = {
   fill:   { r: 1, g: 1, b: 1, a: 1 },
   stroke: { r: 0, g: 0, b: 0, a: 1 },
@@ -196,8 +198,10 @@ let batchBuf:   WebGLBuffer | null = null;
 let batchCap    = 0;          // aktuell allozierte Byte-Größe des VBO
 
 // Zuletzt gesetzte Uniform-Werte (für den Batch-Snapshot pro Befehl).
-let mvUniform   = identity16();
-let projUniform = identity16();
+// View ist pro Frame konstant, Model pro Objekt (Default: Identität).
+let viewUniform  = identity16();
+let modelUniform = identity16();
+let projUniform  = identity16();
 let pointSizeVal = 4;
 let gradCenter: [number, number, number] = [0, 0, 0];
 let gradRadius  = 1;
@@ -331,7 +335,8 @@ function canMerge(a: DrawCmd, b: DrawCmd): boolean {
     a.center[1] === b.center[1] &&
     a.center[2] === b.center[2] &&
     a.radius === b.radius &&
-    arrEq(a.mv, b.mv) &&
+    arrEq(a.view, b.view) &&
+    arrEq(a.model, b.model) &&
     arrEq(a.proj, b.proj) &&
     a.lit === b.lit;
 }
@@ -365,7 +370,8 @@ export function submit(mode: number, verts: Float32Array | number[], useStroke: 
     lineW:     state.lineW,
     center:    [gradCenter[0], gradCenter[1], gradCenter[2]],
     radius:    gradRadius,
-    mv:        new Float32Array(mvUniform),
+    view:      new Float32Array(viewUniform),
+    model:     new Float32Array(modelUniform),
     proj:      new Float32Array(projUniform),
     lit:       lit,
   };
@@ -417,7 +423,8 @@ function flushBatch() {
   gl.vertexAttribPointer(locPos, 3, gl.FLOAT, false, 0, 0);
 
   for (const c of batchCmds) {
-    gl.uniformMatrix4fv(locModelView,  false, c.mv);
+    gl.uniformMatrix4fv(locView,       false, c.view);
+    gl.uniformMatrix4fv(locModel,      false, c.model);
     gl.uniformMatrix4fv(locProjection, false, c.proj);
     gl.uniform1i(locMode,     effectToMode(c.effect));
     gl.uniform1i(locLighted,  c.lit);
@@ -480,12 +487,22 @@ export function setProjection(m: number[][]) {
   gl.uniformMatrix4fv(locProjection, false, projUniform);
 }
 
-/** Setzt die ModelView-Matrix für das 3D-Rendering.
- *  Typischerweise: view × world (siehe lib-3d.ts multMatrix).
+/** Setzt die View-Matrix (Kamera) für das 3D-Rendering.
+ *  Typischerweise einmal pro Frame, z.B. lookAtMatrix(...).
  *  Der Wert wird pro submit() als Snapshot in den Batch übernommen. */
-export function setModelView(m: number[][]) {
-  mvUniform = flattenMatrix(m);
-  gl.uniformMatrix4fv(locModelView, false, mvUniform);
+export function setView(m: number[][]) {
+  viewUniform = flattenMatrix(m);
+  gl.uniformMatrix4fv(locView, false, viewUniform);
+}
+
+/** Setzt die Model-Matrix (Objekt-Transformation) für das 3D-Rendering.
+ *  Default ist die Identität – Primitives wie line()/point()/circle()
+ *  liegen damit automatisch im Weltraum. Objekte setzen ihr Model über
+ *  lib-render.ts (drawSolid) und setzen es danach auf Identität zurück.
+ *  Der Wert wird pro submit() als Snapshot in den Batch übernommen. */
+export function setModel(m: number[][]) {
+  modelUniform = flattenMatrix(m);
+  gl.uniformMatrix4fv(locModel, false, modelUniform);
 }
 
 /** Setzt das Zentrum für den Gradient-Effekt (in Kamera-Koordinaten). */
@@ -538,7 +555,8 @@ export function init(w: number, h: number) {
   gl.useProgram(prog);
 
   locPos        = gl.getAttribLocation (prog, "aPos");
-  locModelView  = gl.getUniformLocation(prog, "uModelView")!;
+  locView       = gl.getUniformLocation(prog, "uView")!;
+  locModel      = gl.getUniformLocation(prog, "uModel")!;
   locProjection = gl.getUniformLocation(prog, "uProjection")!;
   locPointSize  = gl.getUniformLocation(prog, "uPointSize")!;
   locMode       = gl.getUniformLocation(prog, "uMode")!;
@@ -561,7 +579,8 @@ export function init(w: number, h: number) {
 
   // Default-Matrizen (Identität)
   gl.uniformMatrix4fv(locProjection, false, identity16());
-  gl.uniformMatrix4fv(locModelView,  false, identity16());
+  gl.uniformMatrix4fv(locView,       false, identity16());
+  gl.uniformMatrix4fv(locModel,      false, identity16());
 
   // Fog-Defaults (kein Nebel)
   gl.uniform1f(locFogNear, 0);
@@ -580,7 +599,6 @@ export function init(w: number, h: number) {
   startTime = performance.now();
 
   // Batch-Zustand initialisieren (entspricht den oben gesetzten Uniforms).
-  stateStack.length = 0;
   state = {
     fill:   { r: 1, g: 1, b: 1, a: 1 },
     stroke: { r: 0, g: 0, b: 0, a: 1 },
@@ -588,7 +606,8 @@ export function init(w: number, h: number) {
     effect: "flat",
     grad2:  { r: 0, g: 0, b: 0, a: 1 },
   };
-  mvUniform    = identity16();
+  viewUniform  = identity16();
+  modelUniform = identity16();
   projUniform  = identity16();
   pointSizeVal = 4.0;
   gradCenter   = [0, 0, 0];
@@ -630,24 +649,6 @@ export function startAnimation(fnDraw: () => void) {
 /* =================================================================
    ÖFFENTLICHE API – Zeichenzustand
 ================================================================= */
-
-/** Speichert aktuellen Zeichen-Zustand (Farben, Effekt, Linienstärke). */
-export function push() {
-  if (stateStack.length >= maxStack) return; // Überlauf wird ignoriert (wie Go)
-  stateStack.push({
-    fill:   { ...state.fill },
-    stroke: { ...state.stroke },
-    lineW:  state.lineW,
-    effect: state.effect,
-    grad2:  { ...state.grad2 },
-  });
-}
-
-/** Stellt den zuletzt gespeicherten Zeichen-Zustand wieder her. */
-export function pop() {
-  const s = stateStack.pop();
-  if (s) state = s;
-}
 
 /** Füllfarbe setzen.  Hex-String | Grau(0-255) | r,g,b | r,g,b,a (0-255) */
 export function fillColor(...color: (string | number)[]) {

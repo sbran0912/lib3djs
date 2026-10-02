@@ -85,6 +85,7 @@ function draw() {
   const view = l3d.lookAtMatrix(camPos, CAM_TARGET, CAM_UP);
   const proj = l3d.perspectiveMatrix(FOV_Y, wgl.getWidth() / wgl.getHeight(), Z_NEAR, Z_FAR);
   wgl.setProjection(proj);
+  wgl.setView(view);
 
   // Weltfeste „Sonne“: Richtung ist im Weltraum fix und wird pro Frame in den
   // Kameraraum gedreht – so bleibt die Beleuchtung konsistent, obwohl die
@@ -95,7 +96,7 @@ function draw() {
 
   // Alle Bodies zeichnen (Grid zuerst für korrekte Tiefe)
   for (const b of bodies) {
-    render.drawBody(b, view);
+    render.drawBody(b);
   }
 
   // Lichtkegel rotieren
@@ -112,7 +113,6 @@ function draw() {
   const coneR = coneLen * Math.sin(coneAngle);
   const coneZ = coneLen * Math.cos(coneAngle);
 
-  wgl.setModelView(view);
   for (let i = 0; i < coneLines; i++) {
     const a = (2.0 * Math.PI * i) / coneLines;
     const end = new l3d.Vec3(
@@ -138,13 +138,14 @@ function draw() {
       }
     }
 
-    wgl.strokeWidth(1);
-    wgl.strokeColor("#ff8800");
-    wgl.line(apex.x, apex.y, apex.z, endpoint.x, endpoint.y, endpoint.z);
-
-    wgl.strokeColor("#ff0000");
-    wgl.pointSize(5);
-    wgl.point(endpoint.x, endpoint.y, endpoint.z);
+    render.drawLine(
+      apex.x, apex.y, apex.z, endpoint.x, endpoint.y, endpoint.z,
+      { stroke: "#ff8800", lineWidth: 1 },
+    );
+    render.drawPoint(
+      endpoint.x, endpoint.y, endpoint.z,
+      { stroke: "#ff0000", pointSize: 5 },
+    );
   }
 }
 

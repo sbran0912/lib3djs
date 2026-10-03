@@ -6,12 +6,12 @@
 // Zusätzlich werden pro Fahrzeug Debug-Overlays gezeichnet:
 // Heading-Pfeil (Fahrtrichtung) + DNA-Suchradien als Kreise.
 // ====================================================================
-import * as wgl from "./lib3d/lib-wgl.ts";
-import * as l3d from "./lib3d/lib-3d.ts";
-import * as render from "./lib3d/lib-render.ts";
-import { Body, createGrid } from "./lib3d/lib-body.ts";
-import { createPyramidSolid, createSphereSolid } from "./lib3d/lib-solids.ts";
-import type { Solid } from "./lib3d/lib-solids.ts";
+import * as wgl from "../../lib3d/lib-wgl.ts";
+import * as l3d from "../../lib3d/lib-3d.ts";
+import * as render from "../../lib3d/lib-render.ts";
+import { Body, createGrid } from "../../lib3d/lib-body.ts";
+import { createPyramidSolid, createSphereSolid } from "../../lib3d/lib-solids.ts";
+import type { Solid } from "../../lib3d/lib-solids.ts";
 
 // ====================================================================
 // VEHICLE – Physik-fähiges Fahrzeug mit Steering Behaviors

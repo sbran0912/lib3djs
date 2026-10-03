@@ -5,11 +5,11 @@
 // die Y-Achse und wird an den Boxen/Pyramide „abgeschnitten“ (Clipping).
 // Kamera kreist um die Szene.
 // ====================================================================
-import * as wgl from "./lib3d/lib-wgl.ts";
-import * as l3d from "./lib3d/lib-3d.ts";
-import * as render from "./lib3d/lib-render.ts";
-import { Body } from "./lib3d/lib-body.ts";
-import { createBoxSolid, createGridSolid, createPyramidSolid } from "./lib3d/lib-solids.ts";
+import * as wgl from "../../lib3d/lib-wgl.ts";
+import * as l3d from "../../lib3d/lib-3d.ts";
+import * as render from "../../lib3d/lib-render.ts";
+import { Body } from "../../lib3d/lib-body.ts";
+import { createBoxSolid, createGridSolid, createPyramidSolid } from "../../lib3d/lib-solids.ts";
 
 function main() {
   // ====================================================================

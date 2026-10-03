@@ -1,7 +1,7 @@
-import * as wgl from "./lib3d/lib-wgl.ts";
-import * as l3d from "./lib3d/lib-3d.ts";
-import * as render from "./lib3d/lib-render.ts";
-import { createGrid, createSphere } from "./lib3d/lib-body.ts";
+import * as wgl from "../../lib3d/lib-wgl.ts";
+import * as l3d from "../../lib3d/lib-3d.ts";
+import * as render from "../../lib3d/lib-render.ts";
+import { createGrid, createSphere } from "../../lib3d/lib-body.ts";
 
 function main() {
   const SCREEN_W = 1200;
